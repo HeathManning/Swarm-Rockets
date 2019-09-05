@@ -24,7 +24,7 @@ function draw()
 {
     let delta = Date.now()-lastTime;
     lastTime = Date.now();
-    console.log()
+    console.log(delta);
     for(let i = 0; i < world.bodies.length; i++)
     {
         world.bodies[i].Update(delta/1000);
