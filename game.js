@@ -7,7 +7,7 @@ function setup()
     fill(215);
     noStroke();
     ellipseMode(RADIUS);
-    frameRate(30);
+    frameRate(60);
 
     for(let i = 0; i < r; i++)
     {
