@@ -17,15 +17,17 @@ function setup()
     }
 
     //noLoop();
+    lastTime = Date.now();
 }
   
 function draw()
 {
     let delta = Date.now()-lastTime;
     lastTime = Date.now();
+    console.log()
     for(let i = 0; i < world.bodies.length; i++)
     {
-        world.bodies[i].Update(delta);
+        world.bodies[i].Update(delta/1000);
     }
 
     //rotate(player.rotation);

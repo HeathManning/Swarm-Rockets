@@ -107,7 +107,7 @@ class Rocket extends Body
         if(this.detonate)
         {
             this.delete = true;
-            SpawnExplosion(this, fixedDeltaTime, 512, 4096);
+            SpawnExplosion(this, fixedDeltaTime, 256, 4096);
         }
         /*
         for(i = 0; i < World.bodies; i++)
