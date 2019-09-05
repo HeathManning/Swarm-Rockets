@@ -1,13 +1,14 @@
 var player = new Player(new Vec2(300, 400), 0);
 var r = 64;
 
+var lastTime = Date.now();
+
 function setup()
 {
     createCanvas(window.innerWidth, window.innerHeight);
     fill(215);
     noStroke();
     ellipseMode(RADIUS);
-    frameRate(60);
 
     for(let i = 0; i < r; i++)
     {
@@ -20,9 +21,11 @@ function setup()
   
 function draw()
 {
+    let delta = Date.now()-lastTime;
+    lastTime = Date.now();
     for(let i = 0; i < world.bodies.length; i++)
     {
-        world.bodies[i].Update(1/30);
+        world.bodies[i].Update(delta);
     }
 
     //rotate(player.rotation);
