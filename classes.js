@@ -3,7 +3,7 @@ function SpawnExhaust(body, fixedDeltaTime)
     let particles = Math.round(body.mass*8*fixedDeltaTime);
     for(let i = 0; i < particles; i++)
     {
-        let partVel = Vec2.Add(body.velocity, Vec2.FromAngle(body.rotation + Math.PI, body.force/0.1));
+        let partVel = Vec2.Add(body.velocity, Vec2.FromAngle(body.rotation + Math.PI, Math.random()*64 + 256));
         let relPartPos = new Vec2(-body.mass, body.mass*2*(Math.random()-0.5));
         let partPos = GetRelativeVector(body.position, body.rotation, relPartPos);
         new ExhaustParticle(partPos, partVel);
@@ -11,26 +11,28 @@ function SpawnExhaust(body, fixedDeltaTime)
     //was going to calculate how many particles to push out but this is a game not irl so it doesn't matter
 }
 
-function SpawnExplosion(body, fixedDeltaTime, amount, force)
+function SpawnExplosion(body, fixedDeltaTime, size)
 {
-    let particles = Math.round(body.mass*amount*fixedDeltaTime);
+    let particles = Math.round(size);
     //console.log(particles);
     for(let i = 0; i < particles; i++)
     {
-        let partVel = Vec2.Add(body.velocity, Vec2.Scale(Vec2.FromAngle(Math.random()*Math.PI*2, fixedDeltaTime*force/0.1), Math.random()));
-        new ExhaustParticle(body.position.Clone(), partVel);
+        let partVel = Vec2.Add(body.velocity, Vec2.FromAngle(Math.random()*Math.PI*2, Math.random()*size/0.1));
+        new ExplosionParticle(body.position.Clone(), partVel);
     }
 }
 
 class Particle extends Body
 {
-    constructor(position, mass, velocity, duration, parameters)
+    constructor(position, mass, velocity, parameters)
     {
         super(mass, position);
         this.velocity = velocity;
-        this.duration = duration;
+        this.duration = parameters.duration;
         this.curTime = 0;
         this.parameters = parameters;
+        this.maxSpeed = 1000;
+        this.drag = 0.5;
     }
 
     Update(fixedDeltaTime)
@@ -53,7 +55,7 @@ class Particle extends Body
         push();
         translate(this.position.x, this.position.y);
         fill(this.parameters.col);
-        ellipse(0, 0, this.parameters.rad);
+        ellipse(0, 0, this.parameters.rad*(1-this.curTime/this.duration));
         fill(this.parameters.glowCol);
         ellipse(0, 0, this.parameters.glowRad*(1-this.curTime/this.duration));
         pop();
@@ -62,21 +64,35 @@ class Particle extends Body
 
 class ExhaustParticle extends Particle
 {
-    constructor(position, velocity, parameters)
+    constructor(position, velocity)
     {
         let params = 
         {
-            rad:2,
+            duration:Math.random(),
+            rad:4,
             glowRad:16,
-            col:color(255, 223, 195, 255),
-            glowCol:color(255, 223, 195, 31),
-            angleSpread:Math.PI/8
+            col:color(255, 223, 191, 255),
+            glowCol:color(255, 223, 191, 31),
+            angleSpread:Math.PI/12
         };
-        if(parameters != null)
+        super(position, 0.1, Vec2.Rotated(velocity, 2*(Math.random()-0.5)*params.angleSpread), params);
+    }
+}
+
+class ExplosionParticle extends Particle
+{
+    constructor(position, velocity)
+    {
+        let params = 
         {
-            params = parameters;
-        }
-        super(position, 0.1, Vec2.Rotated(velocity, 2*(Math.random()-0.5)*params.angleSpread), Math.random(), params);
+            duration:Math.random()*2,
+            rad:16,
+            glowRad:64,
+            col:color(255, 255, 255, 191),
+            glowCol:color(255, 191, 127, 15),
+            angleSpread:0
+        };
+        super(position, 0.1, velocity, params);
     }
 }
 
@@ -107,7 +123,7 @@ class Rocket extends Body
         if(this.detonate)
         {
             this.delete = true;
-            SpawnExplosion(this, fixedDeltaTime, 256, 4096);
+            SpawnExplosion(this, fixedDeltaTime, 16);
         }
         /*
         for(i = 0; i < World.bodies; i++)
@@ -145,21 +161,24 @@ class Rocket extends Body
         push();
         translate(this.position.x, this.position.y);
         rotate(this.rotation);
+        /*
         if(this.delete)
         {
-            fill(255, 223, 195, 7);
+            fill(255, 223, 191, 7);
             ellipse(0, 0, 768);
         } 
         if(this.detonate)
         {
-            fill(255, 223, 195, 31);
+            fill(255, 223, 191, 31);
             ellipse(0, 0, 64);
-            fill(255, 223, 195, 191);
+            fill(255, 223, 191, 191);
             ellipse(0, 0, 16);
         } else
         {
             triangle(-6, -6, -6, 6, 8, 0);
         }
+        */
+        triangle(-6, -6, -6, 6, 8, 0);
         pop();
     }
 }

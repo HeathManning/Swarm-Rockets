@@ -6,7 +6,7 @@ var lastTime = Date.now();
 function setup()
 {
     createCanvas(window.innerWidth, window.innerHeight);
-    fill(215);
+    fill(191);
     noStroke();
     ellipseMode(RADIUS);
 
@@ -31,7 +31,7 @@ function draw()
 
     //rotate(player.rotation);
     translate(window.innerWidth/2-player.position.x, window.innerHeight/2-player.position.y);
-    background(47);
+    background(31, 31, 47);
     for(let i = 0; i < world.bodies.length; i++)
     {
         world.bodies[i].Draw();
