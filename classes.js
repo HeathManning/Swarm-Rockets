@@ -3,7 +3,7 @@ function SpawnExhaust(body, fixedDeltaTime)
     let particles = Math.round(body.mass*8*fixedDeltaTime);
     for(let i = 0; i < particles; i++)
     {
-        let partVel = Vec2.Add(body.velocity, Vec2.FromAngle(body.rotation + Math.PI, Math.random()*64 + 256));
+        let partVel = Vec2.Add(body.velocity, Vec2.FromAngle(body.rotation + Math.PI, 256));
         let relPartPos = new Vec2(-body.mass, body.mass*2*(Math.random()-0.5));
         let partPos = GetRelativeVector(body.position, body.rotation, relPartPos);
         new ExhaustParticle(partPos, partVel);
@@ -73,7 +73,7 @@ class ExhaustParticle extends Particle
             glowRad:16,
             col:color(255, 223, 191, 255),
             glowCol:color(255, 223, 191, 31),
-            angleSpread:Math.PI/12
+            angleSpread:Math.PI/24
         };
         super(position, 0.1, Vec2.Rotated(velocity, 2*(Math.random()-0.5)*params.angleSpread), params);
     }
