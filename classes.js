@@ -1,12 +1,12 @@
-function SpawnExhaust(body, fixedDeltaTime)
+function SpawnExhaust(body, fixedDeltaTime, params)
 {
     let particles = Math.round(body.mass*8*fixedDeltaTime);
     for(let i = 0; i < particles; i++)
     {
         let partVel = Vec2.Add(body.velocity, Vec2.FromAngle(body.rotation + Math.PI, 256));
-        let relPartPos = new Vec2(-body.mass, body.mass*2*(Math.random()-0.5));
+        let relPartPos = new Vec2(-body.mass, body.mass*(Math.random()-0.5));
         let partPos = GetRelativeVector(body.position, body.rotation, relPartPos);
-        new ExhaustParticle(partPos, partVel);
+        new ExhaustParticle(partPos, partVel, params);
     }
     //was going to calculate how many particles to push out but this is a game not irl so it doesn't matter
 }
@@ -29,10 +29,11 @@ class Particle extends Body
         super(mass, position);
         this.velocity = velocity;
         this.duration = parameters.duration;
-        this.curTime = 0;
+        this.curTime = 0.0;
+        //particle parameters are basically how bright it is, what colour, how long it exists for etc (WIP)
         this.parameters = parameters;
         this.maxSpeed = 1000;
-        this.drag = 0.5;
+        this.drag = 0.7;
     }
 
     Update(fixedDeltaTime)
@@ -42,12 +43,12 @@ class Particle extends Body
         {
             this.Delete();
         }
-        //remove rotation calculations to reduce lag
-        let dragAmt = fixedDeltaTime*this.drag + 1-fixedDeltaTime;
+
+        //remove rotation calculations from parent Body class to reduce lag by a tiny amount
+        let dragAmt = fixedDeltaTime*this.drag + 1.0-fixedDeltaTime;
         this.velocity.Add(Vec2.Scale(this.acceleration, fixedDeltaTime));
         this.velocity.Scale(dragAmt).Clamp(this.maxSpeed);
         this.position.Add(Vec2.Scale(this.velocity, fixedDeltaTime));
-
     }
 
     Draw()
@@ -64,18 +65,21 @@ class Particle extends Body
 
 class ExhaustParticle extends Particle
 {
-    constructor(position, velocity)
+    constructor(position, velocity, parameters)
     {
         let params = 
         {
             duration:Math.random(),
-            rad:4,
-            glowRad:16,
-            col:color(255, 223, 191, 255),
-            glowCol:color(255, 223, 191, 31),
-            angleSpread:Math.PI/24
+            rad:Math.random()*8,
+            glowRad:24,
+            col:color(255, 255, 255, 191),
+            glowCol:color(255, 191, 127, 31)
         };
-        super(position, 0.1, Vec2.Rotated(velocity, 2*(Math.random()-0.5)*params.angleSpread), params);
+        if(parameters != null)
+        {
+            params = parameters;
+        }
+        super(position, 0.1, velocity, params);
     }
 }
 
@@ -85,11 +89,11 @@ class ExplosionParticle extends Particle
     {
         let params = 
         {
-            duration:Math.random()*2,
-            rad:16,
-            glowRad:64,
-            col:color(255, 255, 255, 191),
-            glowCol:color(255, 191, 127, 15),
+            duration:Math.random()*3,
+            rad:Math.random()*32,
+            glowRad:Math.random()*128,
+            col:color(255, 239, 223, 191),
+            glowCol:color(255, 95, 15, 31),
             angleSpread:0
         };
         super(position, 0.1, velocity, params);
@@ -103,14 +107,14 @@ class Rocket extends Body
         //values originally loosely based off the r-60 AAM
         super(4, position);
         this.target = target;
-        this.burnTime = 5;
-        this.force = 384;
+        this.burnTime = 5.0;
+        this.force = 384.0;
         this.angularForce = 16;
         this.angularDrag = 0.1;
         this.maxSpeed = 900;
         this.detonate = false;
         this.delete = false;
-        this.detonationDistance = 32;
+        this.detonationDistance = 32.0;
     }
 
     Update(fixedDeltaTime)
@@ -189,9 +193,9 @@ class Player extends Body
     {
         //values loosely based of the MiG-35
         //not anymore rip
-        super(16, position);
+        super(16.0, position);
         this.rotation = rotation;
-        this.force = 2048;
+        this.force = 2048.0;
         this.angularForce = 64;
         this.maxSpeed = 720;
         this.angularDrag = 0.5;
@@ -222,15 +226,27 @@ class Player extends Body
         if(keyIsDown(87))
         {
             this.acceleration = Vec2.FromAngle(this.rotation, this.force/this.mass);
-            SpawnExhaust(this, fixedDeltaTime);
+            SpawnExhaust(this, fixedDeltaTime,
+            {
+                duration:0.5 + Math.random()*0.5,
+                rad:4,
+                glowRad:32,
+                col:color(255, 239, 95, 191),
+                glowCol:color(255, 127, 63, 15)
+            });
             //console.log("W");
         } else {
             this.acceleration = new Vec2(0, 0);
         }
         super.Update(fixedDeltaTime);
 
+        if(keyIsDown(32))
+        {
+            this.FireRocket(new Vec2(0, 0), testEnemy);
+        }
+
         //new idea: some speed is conserved through turns
-        //this.velocity = Vec2.Lerp(this.velocity, Vec2.Rotated(this.velocity, this.angularVelocity*fixedDeltaTime), this.turnEfficiency);
+        //this.velocity = Vec2.Lerp(this.velocity, Vec2.Rotated(this.velocity, this.angularVelocity*fixedDeltaTime), 0.5);
     }
 
     Draw()
@@ -241,5 +257,11 @@ class Player extends Body
         triangle(-16, -16, -16, 16, 16, 0);
 
         pop();
+    }
+
+    FireRocket(relPos, target)
+    {
+        let rocket = new Rocket(GetRelativeVector(this.position, this.rotation, relPos), target);
+        rocket.velocity = this.velocity.Clone();
     }
 }

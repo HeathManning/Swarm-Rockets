@@ -1,4 +1,5 @@
 var player = new Player(new Vec2(300, 400), 0);
+var testEnemy = new Body(16, new Vec2(0, 0));
 var r = 64;
 
 var lastTime = Date.now();

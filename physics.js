@@ -129,8 +129,8 @@ class Body
 
     Update(fixedDeltaTime)
     {
-        let dragAmt = fixedDeltaTime*this.drag + 1-fixedDeltaTime;
-        let angDragAmt = fixedDeltaTime*this.angularDrag + 1-fixedDeltaTime;
+        let dragAmt = fixedDeltaTime*this.drag + 1.0-fixedDeltaTime;
+        let angDragAmt = fixedDeltaTime*this.angularDrag + 1.0-fixedDeltaTime;
 
         this.velocity.Add(Vec2.Scale(this.acceleration, fixedDeltaTime));
         this.velocity.Scale(dragAmt).Clamp(this.maxSpeed);
