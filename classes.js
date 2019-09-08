@@ -87,7 +87,7 @@ class ExhaustParticle extends Particle
             rad:Math.random()*8,
             glowRad:24,
             col:color(255, 255, 255, 191),
-            glowCol:color(255, 191, 127, 31)
+            glowCol:color(255, 191, 127, 23)
         };
         if(parameters != null)
         {
@@ -123,11 +123,11 @@ class BackgroundStar extends Particle
     {
         let params = 
         {
-            duration:5 + Math.random()*15,
+            duration:60 + Math.random()*120,
             rad:4+Math.random()*4,
             glowRad:256 + Math.random()*256,
-            col:color(255, 255, 255, 223),
-            glowCol:color(255, 223, 127, 7),
+            col:color(255, 255, 255, 191),
+            glowCol:color(255, 223, 127, 3),
             perpetual:true
         };
         if(parameters != null)
@@ -141,6 +141,7 @@ class BackgroundStar extends Particle
     
     Update(fixedDeltaTime)
     {
+        this.curTime = this.curTime + fixedDeltaTime;
         this.rad = this.parameters.rad*Math.sin(this.curTime*Math.PI*2/this.duration);
         this.glowRad = this.parameters.glowRad*Math.sin(this.curTime*Math.PI*2/this.duration);
     }
@@ -225,17 +226,24 @@ class Rocket extends Body
 
     FindClosestEnemy()
     {
-        let curDistance = Vec2.Distance(this.position, this.parent.enemies[0].position);
-        let curClosest = this.parent.enemies[0];
-        for(let i = 1; i < this.parent.enemies.length; i++)
+        if(this.parent.enemies.length != 0)
         {
-            if(Vec2.Distance(this.position, this.parent.enemies[i].position) < curDistance)
+            let curDistance = Vec2.Distance(this.position, this.parent.enemies[0].position);
+            let curClosest = this.parent.enemies[0];
+            for(let i = 1; i < this.parent.enemies.length; i++)
             {
-                curDistance = Vec2.Distance(this.position, this.parent.enemies[i].position);
-                curClosest = this.parent.enemies[i];
+                if(Vec2.Distance(this.position, this.parent.enemies[i].position) < curDistance)
+                {
+                    curDistance = Vec2.Distance(this.position, this.parent.enemies[i].position);
+                    curClosest = this.parent.enemies[i];
+                }
             }
+            return curClosest;
+        } else 
+        {
+            return null;
         }
-        return curClosest;
+
     }
     
     burnTime = 10.0;
@@ -261,7 +269,7 @@ class Rocket extends Body
             this.delete = true;
             SpawnExplosion(this.position, this.velocity, 16);
         }
-        this.curTime = this.curTime + fixedDeltaTime;
+
         if(this.curTime >= this.burnTime)
         {
             this.detonate = true;
@@ -275,22 +283,27 @@ class Rocket extends Body
             }
         }
         */
-        this.Guidance(fixedDeltaTime);
-        this.acceleration = Vec2.FromAngle(this.rotation, this.force/this.mass);
-        super.Update(fixedDeltaTime);
-
-        SpawnExhaust(this, fixedDeltaTime*32);
-
-        if(Vec2.Distance(this.position, this.target.position) < this.detonationDistance)
+        this.target = this.FindClosestEnemy();
+        if(this.target != null)
         {
-            this.detonate = true;
-            this.target.detonate = true;
-        } 
+            this.curTime = this.curTime + fixedDeltaTime;
+
+            this.Guidance(fixedDeltaTime);
+            this.acceleration = Vec2.FromAngle(this.rotation, this.force/this.mass);
+            SpawnExhaust(this, fixedDeltaTime*32);
+
+            if(Vec2.Distance(this.position, this.target.position) < this.detonationDistance)
+            {
+                this.detonate = true;
+                this.target.detonate = true;
+            } 
+
+        }
+        super.Update(fixedDeltaTime);
     }
 
     Guidance(fixedDeltaTime)
     {
-        this.target = this.FindClosestEnemy();
 
         //dumb rocket algorithm, WIP
 
@@ -363,6 +376,7 @@ class Drone extends Body
 
         if(this.delete)
         {
+            curDrones = curDrones - 1;
             this.Delete();
         }
         if(this.detonate)
@@ -478,8 +492,8 @@ class Player extends Body
         {
             if(this.lastFire != true)
             {
-                this.FireRocket(new Vec2(4, -3));
-                this.FireRocket(new Vec2(4, 3));
+                this.FireRocket(new Vec2(2, -8));
+                this.FireRocket(new Vec2(2, 8));
                 this.FindEnemies();
             }
             this.lastFire = true;

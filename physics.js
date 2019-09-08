@@ -96,7 +96,7 @@ class Vec2
     }
     static Random(radius)
     {
-        return Vec2.FromAngle(Math.random()*Math.PI*2, Math.random()*radius);
+        return Vec2.FromAngle(Math.random()*Math.PI*2, radius);
     }
 }
 
