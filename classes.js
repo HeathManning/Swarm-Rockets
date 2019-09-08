@@ -36,12 +36,18 @@ class Particle extends Body
     drag = 0.1;
     curTime = 0.0;
 
+    rad = 0;
+    glowRad = 0;
+
     Update(fixedDeltaTime)
     {
-        this.curTime = this.curTime + fixedDeltaTime;
-        if(this.curTime >= this.duration)
+        if(!this.parameters.perpetual)
         {
-            this.Delete();
+            this.curTime = this.curTime + fixedDeltaTime;
+            if(this.curTime >= this.duration)
+            {
+                this.Delete();
+            }
         }
 
         //remove rotation calculations from parent Body class to reduce lag by a tiny amount
@@ -49,6 +55,14 @@ class Particle extends Body
         this.velocity.Add(Vec2.Scale(this.acceleration, fixedDeltaTime));
         this.velocity.Scale(dragAmt).Clamp(this.maxSpeed);
         this.position.Add(Vec2.Scale(this.velocity, fixedDeltaTime));
+
+        this.rad = this.parameters.rad*(1-this.curTime/this.duration);
+        this.glowRad = this.parameters.glowRad*(1-this.curTime/this.duration);
+        if(this.parameters.perpetual == true)
+        {
+            this.rad = this.parameters.rad*Math.sin(Math.PI*2/this.duration);
+            this.glowRad = this.parameters.glowRad*Math.sin(Math.PI*2/this.duration);
+        }
     }
 
     Draw()
@@ -56,9 +70,9 @@ class Particle extends Body
         push();
         translate(this.position.x, this.position.y);
         fill(this.parameters.col);
-        ellipse(0, 0, this.parameters.rad*(1-this.curTime/this.duration));
+        ellipse(0, 0, this.rad);
         fill(this.parameters.glowCol);
-        ellipse(0, 0, this.parameters.glowRad*(1-this.curTime/this.duration));
+        ellipse(0, 0, this.glowRad);
         pop();
     }
 }
@@ -93,14 +107,42 @@ class ExplosionParticle extends Particle
             rad:Math.random()*32,
             glowRad:Math.random()*128,
             col:color(255, 239, 223, 191),
-            glowCol:color(255, 95, 15, 31),
-            angleSpread:0
+            glowCol:color(255, 95, 15, 31)
         };
         if(parameters != null)
         {
             params = parameters;
         }
         super(position, velocity, params);
+    }
+}
+
+class BackgroundStar extends Particle
+{
+    constructor(position, parameters)
+    {
+        let params = 
+        {
+            duration:Math.random()*25,
+            rad:4+Math.random()*4,
+            glowRad:256 + Math.random()*256,
+            col:color(255, 255, 255, 223),
+            glowCol:color(255, 223, 127, 7),
+            perpetual:true
+        };
+        if(parameters != null)
+        {
+            params = parameters;
+        }
+        super(position, new Vec2(0, 0), params);
+        this.duration = params.duration;
+    }
+    curTime = Math.random()*this.duration;
+    
+    Update(fixedDeltaTime)
+    {
+        this.rad = this.parameters.rad*Math.sin(this.curTime*Math.PI*2/this.duration);
+        this.glowRad = this.parameters.glowRad*Math.sin(this.curTime*Math.PI*2/this.duration);
     }
 }
 

@@ -2,6 +2,7 @@ var player = new Player(new Vec2(300.0, 400.0), 0.0);
 //var testEnemy = new Body(16.0, new Vec2(0.0, 0.0));
 const deltaTimeMax = 1/15;
 var r = 128;
+var stars = 256;
 const cameraSpeed = 0.1;
 var curTranslate = new Vec2((window.innerWidth/2.0-player.position.x), (window.innerHeight/2.0-player.position.y));
 
@@ -19,6 +20,11 @@ function setup()
     for(let i = 0; i < r; i++)
     {
         new Drone(new Vec2(Math.random()*5000, Math.random()*5000), player);
+    }
+
+    for(let i = 0; i < stars; i++)
+    {
+        new BackgroundStar(new Vec2((Math.random()-0.5)*2*10000, (Math.random()-0.5)*2*10000));
     }
     //noLoop();
     lastTime = Date.now();
