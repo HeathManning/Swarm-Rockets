@@ -60,8 +60,8 @@ class Particle extends Body
         this.glowRad = this.parameters.glowRad*(1-this.curTime/this.duration);
         if(this.parameters.perpetual == true)
         {
-            this.rad = this.parameters.rad*Math.sin(Math.PI*2/this.duration);
-            this.glowRad = this.parameters.glowRad*Math.sin(Math.PI*2/this.duration);
+            this.rad = this.parameters.rad*Math.sin(this.curTime*Math.PI*2/this.duration);
+            this.glowRad = this.parameters.glowRad*Math.sin(this.curTime*Math.PI*2/this.duration);
         }
     }
 
@@ -123,7 +123,7 @@ class BackgroundStar extends Particle
     {
         let params = 
         {
-            duration:Math.random()*25,
+            duration:5 + Math.random()*15,
             rad:4+Math.random()*4,
             glowRad:256 + Math.random()*256,
             col:color(255, 255, 255, 223),
