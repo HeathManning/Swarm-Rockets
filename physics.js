@@ -92,7 +92,11 @@ class Vec2
     }
     static Lerp(v1, v2, t)
     {
-        return Vec2.Add(v1.Scale(1-t), v2.Scale(t));
+        return Vec2.Add(Vec2.Scale(v1, 1.0-t), Vec2.Scale(v2, t));
+    }
+    static Random(radius)
+    {
+        return Vec2.FromAngle(Math.random()*Math.PI*2, Math.random()*radius);
     }
 }
 

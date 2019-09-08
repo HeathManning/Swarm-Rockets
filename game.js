@@ -1,6 +1,11 @@
-var player = new Player(new Vec2(300, 400), 0);
-var testEnemy = new Body(16, new Vec2(0, 0));
-var r = 64;
+var player = new Player(new Vec2(300.0, 400.0), 0.0);
+//var testEnemy = new Body(16.0, new Vec2(0.0, 0.0));
+const deltaTimeMax = 1/15;
+var r = 128;
+const cameraSpeed = 0.1;
+var curTranslate = new Vec2((window.innerWidth/2.0-player.position.x), (window.innerHeight/2.0-player.position.y));
+
+var timeScale = 1;
 
 var lastTime = Date.now();
 
@@ -13,32 +18,36 @@ function setup()
 
     for(let i = 0; i < r; i++)
     {
-        let r1 = new Rocket(new Vec2(Math.random()*window.innerWidth, Math.random()*window.innerHeight), player);
-        r1.rotation = Math.random()*Math.PI*2;
+        new Drone(new Vec2(Math.random()*5000, Math.random()*5000), player);
     }
-
     //noLoop();
     lastTime = Date.now();
 }
   
 function draw()
 {
-    let delta = Date.now()-lastTime;
+    let delta = (Date.now()-lastTime)/1000;
     lastTime = Date.now();
+    if(delta > deltaTimeMax)
+    {
+        delta = deltaTimeMax;
+    }
+    delta = delta * timeScale;
     for(let i = 0; i < world.bodies.length; i++)
     {
-        world.bodies[i].Update(delta/1000);
+        world.bodies[i].Update(delta);
     }
 
-    //rotate(player.rotation);
-    translate(window.innerWidth/2-player.position.x, window.innerHeight/2-player.position.y);
+    let trans = new Vec2((window.innerWidth/2.0-player.position.x), (window.innerHeight/2.0-player.position.y));
+    //curTranslate = Vec2.Lerp(curTranslate, trans, cameraSpeed);
+    translate(trans.x, trans.y);
+    
     background(31, 31, 47);
     for(let i = 0; i < world.bodies.length; i++)
     {
         world.bodies[i].Draw();
     }
-    ellipse(300, 300, 16)
-;}
+}
 
 function windowResized() {
     resizeCanvas(window.innerWidth, window.innerHeight);

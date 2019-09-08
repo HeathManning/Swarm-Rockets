@@ -1,6 +1,6 @@
-function SpawnExhaust(body, fixedDeltaTime, params)
+function SpawnExhaust(body, amount, params)
 {
-    let particles = Math.round(body.mass*8*fixedDeltaTime);
+    let particles = Math.round(amount);
     for(let i = 0; i < particles; i++)
     {
         let partVel = Vec2.Add(body.velocity, Vec2.FromAngle(body.rotation + Math.PI, 256));
@@ -11,30 +11,30 @@ function SpawnExhaust(body, fixedDeltaTime, params)
     //was going to calculate how many particles to push out but this is a game not irl so it doesn't matter
 }
 
-function SpawnExplosion(body, fixedDeltaTime, size)
+function SpawnExplosion(position, baseVelocity, size, params)
 {
     let particles = Math.round(size);
     //console.log(particles);
     for(let i = 0; i < particles; i++)
     {
-        let partVel = Vec2.Add(body.velocity, Vec2.FromAngle(Math.random()*Math.PI*2, Math.random()*size/0.1));
-        new ExplosionParticle(body.position.Clone(), partVel);
+        let partVel = Vec2.Add(baseVelocity, Vec2.FromAngle(Math.random()*Math.PI*2, Math.random()*size/0.1));
+        new ExplosionParticle(position.Clone(), partVel, params);
     }
 }
 
 class Particle extends Body
 {
-    constructor(position, mass, velocity, parameters)
+    constructor(position, velocity, parameters)
     {
-        super(mass, position);
+        super(0.1, position);
         this.velocity = velocity;
         this.duration = parameters.duration;
-        this.curTime = 0.0;
         //particle parameters are basically how bright it is, what colour, how long it exists for etc (WIP)
         this.parameters = parameters;
-        this.maxSpeed = 1000;
-        this.drag = 0.7;
     }
+    maxSpeed = 1000;
+    drag = 0.1;
+    curTime = 0.0;
 
     Update(fixedDeltaTime)
     {
@@ -79,13 +79,13 @@ class ExhaustParticle extends Particle
         {
             params = parameters;
         }
-        super(position, 0.1, velocity, params);
+        super(position, velocity, params);
     }
 }
 
 class ExplosionParticle extends Particle
 {
-    constructor(position, velocity)
+    constructor(position, velocity, parameters)
     {
         let params = 
         {
@@ -96,26 +96,116 @@ class ExplosionParticle extends Particle
             glowCol:color(255, 95, 15, 31),
             angleSpread:0
         };
-        super(position, 0.1, velocity, params);
+        if(parameters != null)
+        {
+            params = parameters;
+        }
+        super(position, velocity, params);
+    }
+}
+
+class Bullet extends Body
+{
+    constructor(position, baseVelocity, direction, parent)
+    {
+        super(1, position.Clone());
+        this.parent = parent;
+        this.rotation = direction.Angle();
+        this.velocity = Vec2.Add(baseVelocity, Vec2.Scale(direction, 512.0));
+    }
+    collisionDistance = 32.0;
+    drag = 1;
+    lifeTime = 1;
+    curTime = 0;
+
+    Update(fixedDeltaTime)
+    {
+        this.curTime = this.curTime + fixedDeltaTime;
+        if(this.curTime >= this.lifeTime)
+        {
+            this.Delete();
+        }
+        if(Math.random() >= 0.5)
+        {
+            new Particle(this.position.Clone(), Vec2.Add(this.velocity.Clone().Scale(0.1), Vec2.Random(8)), 
+            {
+                duration:Math.random()*0.5,
+                rad:4 + Math.random()*4,
+                glowRad:16 + Math.random()*4,
+                col:color(255, 255, 191, 95),
+                glowCol:color(191, 95, 15, 31)
+            });
+        }
+
+        for(let i = 0; i < world.bodies.length; i++)
+        {
+            if(world.bodies[i] != this && world.bodies[i] != this.parent && !(world.bodies[i] instanceof Particle) && !(world.bodies[i] instanceof Bullet) && world.bodies[i].target != this.parent.target && Vec2.Distance(this.position, world.bodies[i].position) <= this.collisionDistance)
+            {
+                //console.log(world.bodies[i]);
+                SpawnExplosion(this.position, world.bodies[i].velocity, 8, 
+                {
+                    duration:Math.random(),
+                    rad:4 + Math.random()*4,
+                    glowRad:16 + Math.random()*8,
+                    col:color(255, 255, 191, 191),
+                    glowCol:color(255, 127, 31, 15)
+                });
+                if(world.bodies[i] instanceof Rocket || world.bodies[i] instanceof Drone)
+                {
+                    world.bodies[i].detonate = true;
+                }
+                this.Delete();
+                break;
+            }
+        }
+        
+        this.position.Add(Vec2.Scale(this.velocity, fixedDeltaTime));
+    }
+
+    Draw()
+    {
+        push();
+        translate(this.position.x, this.position.y);
+        rotate(this.rotation);
+        triangle(-4, -3, -4, 3, 8, 0);
+        pop();
     }
 }
 
 class Rocket extends Body
 {
-    constructor(position, target)
+    constructor(position, parent)
     {
         //values originally loosely based off the r-60 AAM
         super(4, position);
-        this.target = target;
-        this.burnTime = 5.0;
-        this.force = 384.0;
-        this.angularForce = 16;
-        this.angularDrag = 0.1;
-        this.maxSpeed = 900;
-        this.detonate = false;
-        this.delete = false;
-        this.detonationDistance = 32.0;
+        this.parent = parent;
     }
+
+    FindClosestEnemy()
+    {
+        let curDistance = Vec2.Distance(this.position, this.parent.enemies[0].position);
+        let curClosest = this.parent.enemies[0];
+        for(let i = 1; i < this.parent.enemies.length; i++)
+        {
+            if(Vec2.Distance(this.position, this.parent.enemies[i].position) < curDistance)
+            {
+                curDistance = Vec2.Distance(this.position, this.parent.enemies[i].position);
+                curClosest = this.parent.enemies[i];
+            }
+        }
+        return curClosest;
+    }
+    
+    burnTime = 10.0;
+    force = 512.0;
+    angularForce = 16;
+    angularLerp = 0.1;
+    maxSpeed = 900;
+    detonate = false;
+    delete = false;
+    detonationDistance = 64.0;
+    curTime = 0;
+    target = null;
 
     Update(fixedDeltaTime)
     {
@@ -127,7 +217,12 @@ class Rocket extends Body
         if(this.detonate)
         {
             this.delete = true;
-            SpawnExplosion(this, fixedDeltaTime, 16);
+            SpawnExplosion(this.position, this.velocity, 16);
+        }
+        this.curTime = this.curTime + fixedDeltaTime;
+        if(this.curTime >= this.burnTime)
+        {
+            this.detonate = true;
         }
         /*
         for(i = 0; i < World.bodies; i++)
@@ -142,22 +237,34 @@ class Rocket extends Body
         this.acceleration = Vec2.FromAngle(this.rotation, this.force/this.mass);
         super.Update(fixedDeltaTime);
 
-        SpawnExhaust(this, fixedDeltaTime);
+        SpawnExhaust(this, fixedDeltaTime*32);
 
         if(Vec2.Distance(this.position, this.target.position) < this.detonationDistance)
         {
             this.detonate = true;
+            this.target.detonate = true;
         } 
     }
 
     Guidance(fixedDeltaTime)
     {
+        this.target = this.FindClosestEnemy();
+
         //dumb rocket algorithm, WIP
 
         //find angle from this to target
         let tarAngle = Vec2.Normalise(Vec2.Subtract(this.target.position, this.position)).Angle();
-        this.rotation = tarAngle;
+        //this.rotation = (this.rotation*this.angularLerp) + tarAngle*(1-this.angularLerp);
+        /*
         //WIP find best angle to accelerate towards
+        //first, find poor prediction for where target will be when this gets there
+        //must find time first, very poor, does not take initial velocity into account
+        let dist = Vec2.Distance(this.position, this.target.position);
+        let targetTime = Math.sqrt(dist/(dist+0.5*this.force/this.mass));
+        let futPos = Vec2.Scale(this.target.velocity, targetTime);
+        let tarAngle = (Vec2.Subtract(this.target.position, this.position)).Angle();
+        */
+        this.rotation = Vec2.Lerp(Vec2.FromAngle(this.rotation, 1.0), Vec2.FromAngle(tarAngle, 1.0), this.angularLerp).Angle();
     }
 
     Draw()
@@ -187,6 +294,88 @@ class Rocket extends Body
     }
 }
 
+class Drone extends Body
+{
+    constructor(position, target)
+    {
+        super(8, position);
+        this.target = target;
+    }
+    force = 512.0;
+    angularForce = 16;
+    angularLerp = 0.1;
+    throttle = 0.1;
+    maxSpeed = 640;
+    detonate = false;
+    delete = false;
+    fireFrequency = 1.0;
+
+    shotTimer = 0;
+
+    targetStalkRadius = 128;
+    engageDistance = 256;
+    
+    Update(fixedDeltaTime)
+    {
+
+
+        if(this.delete)
+        {
+            this.Delete();
+        }
+        if(this.detonate)
+        {
+            this.delete = true;
+            SpawnExplosion(this.position, this.velocity, 4);
+        }
+
+        if(this.shotTimer >= 1/this.fireFrequency)
+        {
+            let tarAngle = Vec2.Subtract(this.target.position, this.position).Angle();
+            if(Vec2.Distance(this.position, this.target.position) <= this.engageDistance)
+            {
+                this.shotTimer = 0;
+                new Bullet(this.position, this.velocity, Vec2.Normalise(Vec2.Subtract(this.target.position, this.position)), this);
+            }
+        } else {
+            this.shotTimer = this.shotTimer + fixedDeltaTime;
+        }  
+
+        this.Guidance(fixedDeltaTime);
+        
+        super.Update(fixedDeltaTime);
+
+        SpawnExhaust(this, fixedDeltaTime*32,
+        {
+            duration:Math.random()*0.5,
+            rad:2,
+            glowRad:16,
+            col:color(255, 239, 95, 191),
+            glowCol:color(255, 127, 63, 15)
+        });
+    }
+
+    Guidance(fixedDeltaTime)
+    {
+        let tarPos = Vec2.Add(this.target.position, Vec2.Scale(Vec2.Normalise(Vec2.Subtract(this.position, this.target.position)), this.targetStalkRadius));
+        let tarAngle = Vec2.Subtract(tarPos, this.position).Angle();
+        let speedScale = 1-this.velocity.Magnitude()/this.maxSpeed;
+
+        this.acceleration = Vec2.FromAngle(this.rotation, speedScale*this.acceleration.Magnitude()*(1-this.throttle) + (this.force/this.mass)*this.throttle);
+
+        this.rotation = Vec2.Lerp(Vec2.FromAngle(this.rotation, 1.0), Vec2.FromAngle(tarAngle, 1.0), this.angularLerp).Angle();
+    }
+
+    Draw()
+    {
+        push();
+        translate(this.position.x, this.position.y);
+        rotate(this.rotation);
+        triangle(-4, -8, -4, 8, 6, 0);
+        pop();
+    }
+}
+
 class Player extends Body
 {
     constructor(position, rotation)
@@ -195,11 +384,14 @@ class Player extends Body
         //not anymore rip
         super(16.0, position);
         this.rotation = rotation;
-        this.force = 2048.0;
-        this.angularForce = 64;
-        this.maxSpeed = 720;
-        this.angularDrag = 0.5;
     }
+    force = 2048.0;
+    angularForce = 64;
+    maxSpeed = 720;
+    angularDrag = 0.5;
+    lastFire = false;
+
+    enemies = [];
 
     Update(fixedDeltaTime)
     {
@@ -226,7 +418,7 @@ class Player extends Body
         if(keyIsDown(87))
         {
             this.acceleration = Vec2.FromAngle(this.rotation, this.force/this.mass);
-            SpawnExhaust(this, fixedDeltaTime,
+            SpawnExhaust(this, fixedDeltaTime*128,
             {
                 duration:0.5 + Math.random()*0.5,
                 rad:4,
@@ -242,7 +434,15 @@ class Player extends Body
 
         if(keyIsDown(32))
         {
-            this.FireRocket(new Vec2(0, 0), testEnemy);
+            if(this.lastFire != true)
+            {
+                this.FireRocket(new Vec2(4, -3));
+                this.FireRocket(new Vec2(4, 3));
+                this.FindEnemies();
+            }
+            this.lastFire = true;
+        } else {
+            this.lastFire = false;
         }
 
         //new idea: some speed is conserved through turns
@@ -259,9 +459,22 @@ class Player extends Body
         pop();
     }
 
-    FireRocket(relPos, target)
+    FireRocket(relPos)
     {
-        let rocket = new Rocket(GetRelativeVector(this.position, this.rotation, relPos), target);
-        rocket.velocity = this.velocity.Clone();
+        let rocket = new Rocket(GetRelativeVector(this.position, this.rotation, relPos), this);
+        rocket.velocity = Vec2.Add(this.velocity, Vec2.FromAngle(this.rotation, 256));
+        rocket.rotation = this.rotation;
+    }
+
+    FindEnemies()
+    {
+        this.enemies = [];
+        for(let i = 1; i < world.bodies.length; i++)
+        {
+            if(world.bodies[i] instanceof Drone && world.bodies[i].target == this)
+            {
+                this.enemies.push(world.bodies[i]);
+            }
+        }
     }
 }
