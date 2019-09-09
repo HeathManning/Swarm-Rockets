@@ -7,12 +7,20 @@ const cameraSpeed = 0.1;
 var curTranslate = new Vec2((window.innerWidth/2.0-player.position.x), (window.innerHeight/2.0-player.position.y));
 
 var droneSpawnChance = 0.5;
-var maxDrones = 64;
+var maxDrones = 32;
 var curDrones = 0;
 
 var timeScale = 1;
 
 var lastTime = Date.now();
+
+var zoom = 1;
+
+/*function mouseWheel(event) {
+    zoom += event.delta/10;
+    //uncomment to block page scrolling
+    return false;
+  }*/
 
 function setup()
 {
@@ -24,6 +32,7 @@ function setup()
     for(let i = 0; i < r; i++)
     {
         new Drone(new Vec2(Math.random()*5000, Math.random()*5000), player);
+        curDrones += 1;
     }
 
     for(let i = 0; i < stars; i++)
@@ -55,8 +64,10 @@ function draw()
         world.bodies[i].Update(delta);
     }
 
-    let trans = new Vec2((window.innerWidth/2.0-player.position.x), (window.innerHeight/2.0-player.position.y));
+
+    let trans = new Vec2((window.innerWidth/(zoom*2.0)-player.position.x), (window.innerHeight/(zoom*2.0)-player.position.y));
     //curTranslate = Vec2.Lerp(curTranslate, trans, cameraSpeed);
+    scale(zoom);
     translate(trans.x, trans.y);
     
     background(31, 31, 47);
