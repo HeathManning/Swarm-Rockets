@@ -22,6 +22,27 @@ function SpawnExplosion(position, baseVelocity, size, params)
     }
 }
 
+function FindClosestBody(position, bodies)
+{
+    if(bodies.length != 0)
+    {
+        let curDistance = Vec2.Distance(position, bodies[0].position);
+        let curClosest = bodies[0];
+        for(let i = 1; i < bodies.length; i++)
+        {
+            if(Vec2.Distance(position, bodies[i].position) < curDistance)
+            {
+                curDistance = Vec2.Distance(position, bodies[i].position);
+                curClosest = bodies[i];
+            }
+        }
+        return curClosest;
+    } else 
+    {
+        return null;
+    }
+}
+
 class Particle extends Body
 {
     constructor(position, velocity, parameters)
@@ -195,7 +216,8 @@ class Bullet extends Body
                     col:color(255, 255, 191, 191),
                     glowCol:color(255, 127, 31, 15)
                 });
-                world.bodies[i].health -= Math.round(Math.abs(Vec2.Subtract(this.velocity, world.bodies[i].velocity).Magnitude()));
+                world.bodies[i].health -= Math.round(Math.abs(Vec2.Subtract(this.velocity, world.bodies[i].velocity).Magnitude()))*this.mass/world.bodies[i].mass;
+                //console.log(Math.round(Math.abs(Vec2.Subtract(this.velocity, world.bodies[i].velocity).Magnitude()))*this.mass/world.bodies[i].mass);
                 this.Delete();
                 break;
             }
@@ -221,28 +243,6 @@ class Rocket extends Body
         //values originally loosely based off the r-60 AAM
         super(4, position);
         this.parent = parent;
-    }
-
-    FindClosestEnemy()
-    {
-        if(this.parent.enemies.length != 0)
-        {
-            let curDistance = Vec2.Distance(this.position, this.parent.enemies[0].position);
-            let curClosest = this.parent.enemies[0];
-            for(let i = 1; i < this.parent.enemies.length; i++)
-            {
-                if(Vec2.Distance(this.position, this.parent.enemies[i].position) < curDistance)
-                {
-                    curDistance = Vec2.Distance(this.position, this.parent.enemies[i].position);
-                    curClosest = this.parent.enemies[i];
-                }
-            }
-            return curClosest;
-        } else 
-        {
-            return null;
-        }
-
     }
     
     burnTime = 10.0;
@@ -292,7 +292,7 @@ class Rocket extends Body
             }
         }
         */
-        this.target = this.FindClosestEnemy();
+        this.target = FindClosestBody(this.position, this.parent.enemies)
         if(this.target != null)
         {
             this.curTime = this.curTime + fixedDeltaTime;
@@ -378,7 +378,7 @@ class Drone extends Body
     targetStalkRadius = 128;
     engageDistance = 256;
 
-    health = 65;
+    health = 64;
     
     Update(fixedDeltaTime)
     {
@@ -394,20 +394,25 @@ class Drone extends Body
             this.Delete();
         }
 
-        if(this.shotTimer >= 1/this.fireFrequency)
+        this.curTarget = FindClosestBody(this.position, this.FindTargets());
+        if(this.curTarget != null)
         {
-            let tarAngle = Vec2.Subtract(this.target.position, this.position).Angle();
-            if(Vec2.Distance(this.position, this.target.position) <= this.engageDistance)
+            if(this.shotTimer >= 1/this.fireFrequency)
             {
-                this.shotTimer = 0;
-                new Bullet(this.position, this.velocity, Vec2.Normalise(Vec2.Subtract(this.target.position, this.position)), this);
+                let tarAngle = Vec2.Subtract(this.curTarget.position, this.position).Angle();
+                if(Vec2.Distance(this.position, this.curTarget.position) <= this.engageDistance)
+                {
+                    this.shotTimer = 0;
+                    new Bullet(this.position, this.velocity, Vec2.Normalise(Vec2.Subtract(this.curTarget.position, this.position)), this);
+                }
+            } else 
+            {
+                this.shotTimer = this.shotTimer + fixedDeltaTime;
             }
-        } else {
-            this.shotTimer = this.shotTimer + fixedDeltaTime;
+
+            this.Guidance(fixedDeltaTime);
         }
 
-        this.Guidance(fixedDeltaTime);
-        
         super.Update(fixedDeltaTime);
 
         SpawnExhaust(this, fixedDeltaTime*32,
@@ -422,13 +427,26 @@ class Drone extends Body
 
     Guidance(fixedDeltaTime)
     {
-        let tarPos = Vec2.Add(this.target.position, Vec2.Scale(Vec2.Normalise(Vec2.Subtract(this.position, this.target.position)), this.targetStalkRadius));
+        let tarPos = Vec2.Add(this.curTarget.position, Vec2.Scale(Vec2.Normalise(Vec2.Subtract(this.position, this.curTarget.position)), this.targetStalkRadius));
         let tarAngle = Vec2.Subtract(tarPos, this.position).Angle();
         let speedScale = 1-this.velocity.Magnitude()/this.maxSpeed;
 
         this.acceleration = Vec2.FromAngle(this.rotation, speedScale*this.acceleration.Magnitude()*(1-this.throttle) + (this.force/this.mass)*this.throttle);
 
         this.rotation = Vec2.Lerp(Vec2.FromAngle(this.rotation, 1.0), Vec2.FromAngle(tarAngle, 1.0), this.angularLerp).Angle();
+    }
+
+    FindTargets()
+    {
+        let tars = [this.target];
+        for(let i = 0; i < world.bodies.length; i++)
+        {
+            if(world.bodies[i].parent == this.target)
+            {
+                tars.push(world.bodies[i]);
+            }
+        }
+        return tars;
     }
 
     Draw()
@@ -457,6 +475,11 @@ class Player extends Body
     lastFire = false;
 
     enemies = [];
+
+    //dots is the currency
+    dots = 0;
+    maxDots = 256;
+    turretCost = 64;
 
     Update(fixedDeltaTime)
     {
@@ -507,12 +530,14 @@ class Player extends Body
                 this.FireRocket(new Vec2(2, 8));
             }
             this.lastFire = true;
-        } else {
+        } else
+        {
             this.lastFire = false;
         }
 
-        if(keyIsDown(16))
+        if(keyIsDown(16) && this.dots >= this.turretCost)
         {
+            this.dots -= this.turretCost;
             new Turret(this.position.Clone(), this).velocity = this.velocity.Clone();
         }
 
@@ -559,37 +584,18 @@ class Turret extends Body
         this.parent = parent;
     }
     turretAngle = 0;
-    turretLerp = 0.1;
+    turretLerp = 0.2;
 
     shotTimer = 0;
     turretLength = 32;
-    turretWidth = 8;
+    turretWidth = 12;
     delete = false;
-    fireFrequency = 3.0;
+    fireFrequency = 2;
     engageDistance = 384.0;
 
-    health = 120;
+    drag = 0.1;
 
-    FindClosestEnemy()
-    {
-        if(this.parent.enemies.length != 0)
-        {
-            let curDistance = Vec2.Distance(this.position, this.parent.enemies[0].position);
-            let curClosest = this.parent.enemies[0];
-            for(let i = 1; i < this.parent.enemies.length; i++)
-            {
-                if(Vec2.Distance(this.position, this.parent.enemies[i].position) < curDistance)
-                {
-                    curDistance = Vec2.Distance(this.position, this.parent.enemies[i].position);
-                    curClosest = this.parent.enemies[i];
-                }
-            }
-            return curClosest;
-        } else 
-        {
-            return null;
-        }
-    }
+    health = 256;
 
     Update(fixedDeltaTime)
     {
@@ -604,7 +610,7 @@ class Turret extends Body
             this.Delete();
         }
 
-        this.target = this.FindClosestEnemy();
+        this.target = FindClosestBody(this.position, this.parent.enemies);
         if(this.target != null)
         {
             let dist = Vec2.Distance(this.position, this.target.position)
@@ -622,7 +628,9 @@ class Turret extends Body
             }
         }
 
-        super.Update(fixedDeltaTime);
+        let dragAmt = fixedDeltaTime*this.drag + 1.0-fixedDeltaTime;
+        this.velocity.Scale(dragAmt).Clamp(this.maxSpeed);
+        this.position.Add(Vec2.Scale(this.velocity, fixedDeltaTime));
     }
 
     Draw()
@@ -630,10 +638,10 @@ class Turret extends Body
         push();
         translate(this.position.x, this.position.y);
         rotate(this.rotation);
-        fill(143)
+        fill(143);
         ellipse(0, 0, 24);
         fill(191);
-        ellipse(0, 0, this.turretWidth*2);
+        ellipse(0, 0, 16);
         strokeWeight(this.turretWidth);
         stroke(191);
         strokeCap(SQUARE);
