@@ -1,7 +1,7 @@
 var player = new Player(new Vec2(0.0, 0.0), 0.0);
 //var testEnemy = new Body(16.0, new Vec2(0.0, 0.0));
 const deltaTimeMax = 1/15;
-var r = 8;
+var r = 0;
 var stars = 2048;
 const cameraSpeed = 0.1;
 var curTranslate = new Vec2((window.innerWidth/2.0-player.position.x), (window.innerHeight/2.0-player.position.y));
