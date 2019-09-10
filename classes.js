@@ -149,12 +149,14 @@ class BackgroundStar extends Particle
 
 class Bullet extends Body
 {
+    static bulletSpeed = 512;
+
     constructor(position, baseVelocity, direction, parent)
     {
         super(1, position.Clone());
         this.parent = parent;
         this.rotation = direction.Angle();
-        this.velocity = Vec2.Add(baseVelocity, Vec2.Scale(direction, 512.0));
+        this.velocity = Vec2.Add(baseVelocity, Vec2.Scale(direction, Bullet.bulletSpeed));
     }
     collisionDistance = 32.0;
     drag = 1;
@@ -193,10 +195,7 @@ class Bullet extends Body
                     col:color(255, 255, 191, 191),
                     glowCol:color(255, 127, 31, 15)
                 });
-                if(world.bodies[i] instanceof Rocket || world.bodies[i] instanceof Drone)
-                {
-                    world.bodies[i].detonate = true;
-                }
+                world.bodies[i].health -= Math.round(Math.abs(Vec2.Subtract(this.velocity, world.bodies[i].velocity).Magnitude()));
                 this.Delete();
                 break;
             }
@@ -268,6 +267,16 @@ class Rocket extends Body
         {
             this.delete = true;
             SpawnExplosion(this.position, this.velocity, 16);
+
+            for(let i = 0; i < this.parent.enemies.length; i++)
+            {
+                let dist = Vec2.Distance(this.position, this.parent.enemies[i].position);
+                if(dist < this.detonationDistance*2)
+                {
+                    this.parent.enemies[i].health -= Math.round(1024/dist);
+                    //console.log(this.parent.enemies[i].health);
+                }
+            }
         }
 
         if(this.curTime >= this.burnTime)
@@ -295,7 +304,6 @@ class Rocket extends Body
             if(Vec2.Distance(this.position, this.target.position) < this.detonationDistance)
             {
                 this.detonate = true;
-                this.target.detonate = true;
             } 
 
         }
@@ -369,20 +377,21 @@ class Drone extends Body
 
     targetStalkRadius = 128;
     engageDistance = 256;
+
+    health = 65;
     
     Update(fixedDeltaTime)
     {
-
+        if(this.health <= 0)
+        {
+            this.delete = true;
+        }
 
         if(this.delete)
         {
+            SpawnExplosion(this.position, this.velocity, 4);
             curDrones = curDrones - 1;
             this.Delete();
-        }
-        if(this.detonate)
-        {
-            this.delete = true;
-            SpawnExplosion(this.position, this.velocity, 4);
         }
 
         if(this.shotTimer >= 1/this.fireFrequency)
@@ -395,7 +404,7 @@ class Drone extends Body
             }
         } else {
             this.shotTimer = this.shotTimer + fixedDeltaTime;
-        }  
+        }
 
         this.Guidance(fixedDeltaTime);
         
@@ -488,17 +497,23 @@ class Player extends Body
         }
         super.Update(fixedDeltaTime);
 
+        this.FindEnemies();
+
         if(keyIsDown(32))
         {
             if(this.lastFire != true)
             {
                 this.FireRocket(new Vec2(2, -8));
                 this.FireRocket(new Vec2(2, 8));
-                this.FindEnemies();
             }
             this.lastFire = true;
         } else {
             this.lastFire = false;
+        }
+
+        if(keyIsDown(16))
+        {
+            new Turret(this.position.Clone(), this).velocity = this.velocity.Clone();
         }
 
         //new idea: some speed is conserved through turns
@@ -532,5 +547,98 @@ class Player extends Body
                 this.enemies.push(world.bodies[i]);
             }
         }
+    }
+}
+
+
+class Turret extends Body
+{
+    constructor(position, parent)
+    {
+        super(32.0, position);
+        this.parent = parent;
+    }
+    turretAngle = 0;
+    turretLerp = 0.1;
+
+    shotTimer = 0;
+    turretLength = 32;
+    turretWidth = 8;
+    delete = false;
+    fireFrequency = 3.0;
+    engageDistance = 384.0;
+
+    health = 120;
+
+    FindClosestEnemy()
+    {
+        if(this.parent.enemies.length != 0)
+        {
+            let curDistance = Vec2.Distance(this.position, this.parent.enemies[0].position);
+            let curClosest = this.parent.enemies[0];
+            for(let i = 1; i < this.parent.enemies.length; i++)
+            {
+                if(Vec2.Distance(this.position, this.parent.enemies[i].position) < curDistance)
+                {
+                    curDistance = Vec2.Distance(this.position, this.parent.enemies[i].position);
+                    curClosest = this.parent.enemies[i];
+                }
+            }
+            return curClosest;
+        } else 
+        {
+            return null;
+        }
+    }
+
+    Update(fixedDeltaTime)
+    {
+        if(this.health <= 0)
+        {
+            this.delete = true;
+        }
+
+        if(this.delete)
+        {
+            SpawnExplosion(this.position, this.velocity, 12);
+            this.Delete();
+        }
+
+        this.target = this.FindClosestEnemy();
+        if(this.target != null)
+        {
+            let dist = Vec2.Distance(this.position, this.target.position)
+            //figure out where to aim turret to hit target
+            let tarPos = Vec2.Add(this.target.position, Vec2.Scale(this.target.velocity, dist/Bullet.bulletSpeed));
+            let tarAngle = Vec2.Subtract(tarPos, this.position).Angle();
+            this.turretAngle = Vec2.Lerp(Vec2.FromAngle(this.turretAngle, 1.0), Vec2.FromAngle(tarAngle, 1.0), this.turretLerp).Angle()
+            if(dist <= this.engageDistance && this.shotTimer >= 1/this.fireFrequency)
+            {
+                this.shotTimer = 0;
+                new Bullet(Vec2.Add(this.position, Vec2.FromAngle(this.turretAngle, this.turretLength)), this.velocity.Clone(), Vec2.FromAngle(this.turretAngle, 1), this);
+            } else if(this.shotTimer < 1/this.fireFrequency)
+            {
+                this.shotTimer = this.shotTimer + fixedDeltaTime;
+            }
+        }
+
+        super.Update(fixedDeltaTime);
+    }
+
+    Draw()
+    {
+        push();
+        translate(this.position.x, this.position.y);
+        rotate(this.rotation);
+        fill(143)
+        ellipse(0, 0, 24);
+        fill(191);
+        ellipse(0, 0, this.turretWidth*2);
+        strokeWeight(this.turretWidth);
+        stroke(191);
+        strokeCap(SQUARE);
+        let endPoint = Vec2.FromAngle(this.turretAngle, this.turretLength);
+        line(0, 0, endPoint.x, endPoint.y);
+        pop();
     }
 }
