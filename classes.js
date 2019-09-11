@@ -205,7 +205,7 @@ class Bullet extends Body
 
         for(let i = 0; i < world.bodies.length; i++)
         {
-            if(world.bodies[i] != this && world.bodies[i] != this.parent && !(world.bodies[i] instanceof Particle) && !(world.bodies[i] instanceof Bullet) && world.bodies[i].target != this.parent.target && Vec2.Distance(this.position, world.bodies[i].position) <= this.collisionDistance)
+            if(world.bodies[i] != this && world.bodies[i] != this.parent && !(world.bodies[i] instanceof Particle) && !(world.bodies[i] instanceof Bullet) && world.bodies[i] != this.parent && world.bodies[i].target != this.parent.target && Vec2.Distance(this.position, world.bodies[i].position) <= this.collisionDistance)
             {
                 //console.log(world.bodies[i]);
                 SpawnExplosion(this.position, world.bodies[i].velocity, 8, 
@@ -256,6 +256,8 @@ class Rocket extends Body
     curTime = 0;
     target = null;
 
+    health = 32;
+
     Update(fixedDeltaTime)
     {
         //two variables to make explosion 2 frames instead of 1
@@ -279,7 +281,7 @@ class Rocket extends Body
             }
         }
 
-        if(this.curTime >= this.burnTime)
+        if(this.curTime >= this.burnTime || this.health <= 0)
         {
             this.detonate = true;
         }
