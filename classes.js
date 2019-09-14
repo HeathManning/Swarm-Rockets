@@ -84,6 +84,7 @@ class GameObject extends Body
     }
 }
 
+
 class Particle extends Body
 {
     constructor(position, velocity, parameters)
@@ -277,6 +278,7 @@ class Bullet extends GameObject
     }
 }
 
+
 class Rocket extends GameObject
 {
     constructor(position, parent)
@@ -434,7 +436,7 @@ class Drone extends GameObject
 
         if(this.delete)
         {
-            SpawnExplosion(this.position, this.velocity, 4);
+            SpawnExplosion(this.position, this.velocity, 3);
             curDrones = curDrones - 1;
             this.Delete();
         }
@@ -506,6 +508,7 @@ class Drone extends GameObject
         pop();
     }
 }
+
 
 class Player extends GameObject
 {

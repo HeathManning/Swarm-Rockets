@@ -8,7 +8,7 @@ var player = new Player(new Vec2(0.0, 0.0), 0.0);
 //var testEnemy = new Body(16.0, new Vec2(0.0, 0.0));
 const deltaTimeMax = 1/15;
 var r = 4;
-var stars = 2048;
+var stars = 0;
 const cameraSpeed = 0.1;
 var curTranslate = new Vec2((window.innerWidth/2.0-player.position.x), (window.innerHeight/2.0-player.position.y));
 
@@ -20,7 +20,7 @@ var timeScale = 1;
 
 var lastTime = Date.now();
 
-var zoom = 0.4;
+var zoom = 0.5;
 
 var dotsSpeed = 3;
 
@@ -92,6 +92,10 @@ function draw()
 
     player.dots += delta*dotsSpeed;
     player.dots = Math.min(player.dots, player.maxDots);
+
+    let fps = frameRate();
+    fill(255);
+    text("FPS: " + fps.toFixed(2), 10, height - 10);
 }
 
 function windowResized() {

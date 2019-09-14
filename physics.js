@@ -210,3 +210,30 @@ class Circle extends CollisionShape
         return (1/2)*mass*this.radius*this.radius;
     }
 }
+
+class Polygon extends CollisionShape
+{
+    constructor(vertices)
+    {
+        this.vertices = vertices;
+    }
+}
+
+class RegularPolygon extends Polygon
+{
+    constructor(radius, sides)
+    {
+        this.vertices = [];
+        this.sides = sides*1;
+        let angleStep = Math.PI*2/sides;
+        for(let i = 0; i < sides; i++)
+        {
+            this.vertices.push(Vec2.FromAngle(angleStep*i, radius));
+        }
+    }
+
+    Inertia(mass)
+    {
+        return (1/2) * mass * this.radius*this.radius * (1 - (2/3) * Math.sin(Math.PI/this.sides)*Math.sin(Math.PI/this.sides));
+    }
+}
