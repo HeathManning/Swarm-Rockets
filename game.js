@@ -1,7 +1,13 @@
+class World
+{
+    bodies = [];
+}
+const world = new World();
+
 var player = new Player(new Vec2(0.0, 0.0), 0.0);
 //var testEnemy = new Body(16.0, new Vec2(0.0, 0.0));
 const deltaTimeMax = 1/15;
-var r = 0;
+var r = 4;
 var stars = 2048;
 const cameraSpeed = 0.1;
 var curTranslate = new Vec2((window.innerWidth/2.0-player.position.x), (window.innerHeight/2.0-player.position.y));
@@ -14,7 +20,7 @@ var timeScale = 1;
 
 var lastTime = Date.now();
 
-var zoom = 1;
+var zoom = 0.4;
 
 var dotsSpeed = 3;
 
@@ -35,7 +41,7 @@ function setup()
 
     for(let i = 0; i < r; i++)
     {
-        new Turret(new Vec2((Math.random()-0.5)*2*500, (Math.random()-0.5)*2*500), player);
+        new Shield(new Vec2((Math.random()-0.5)*2*500, (Math.random()-0.5)*2*500), player);
         //curDrones += 1;
     }
 
@@ -76,7 +82,7 @@ function draw()
     scale(zoom);
     translate(trans.x, trans.y);
     
-    for(let i = 0; i < world.bodies.length; i++)
+    for(let i = world.bodies.length-1; i >= 0; i--)
     {
         world.bodies[i].Draw();
     }

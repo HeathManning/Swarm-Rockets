@@ -49,6 +49,10 @@ class Vec2
         return this
     }
 
+    static Dot(v1, v2)
+    {
+        return v1.x*v2.x + v1.y*v2.y;
+    }
     static Distance(v1, v2)
     {
         return Math.sqrt((v2.x-v1.x)*(v2.x-v1.x) + (v2.y-v1.y)*(v2.y-v1.y));
@@ -106,12 +110,6 @@ function GetRelativeVector(v1, angle, v2)
     return Vec2.Add(v1, Vec2.FromAngle(totalAngle, v2.Magnitude()));
 }
 
-class World
-{
-    bodies = [];
-}
-const world = new World();
-
 class Body
 {
     constructor(mass, position)
@@ -123,10 +121,12 @@ class Body
         this.rotation = 0;
         this.angularVelocity = 0;
         this.angularAcceleration = 0;
-        this.maxSpeed = 100;
+        this.maxSpeed = 1000;
         this.maxAngularSpeed = 100;
         this.drag = 0.9;
         this.angularDrag = 0.9;
+        this.startHealth = 64;
+        this.health = 64;
 
         world.bodies.push(this);
     }
@@ -149,11 +149,6 @@ class Body
         this.rotation = (this.rotation + this.angularVelocity*fixedDeltaTime) % (Math.PI*2);
     }
 
-    Draw()
-    {
-
-    }
-
     Delete()
     {
         for(let i = 0; i < world.bodies.length; i++)
@@ -165,5 +160,53 @@ class Body
             }
         }
         delete this;
+    }
+}
+
+class Collider2D
+{
+    constructor(shape)
+    {
+        this.shape = shape;
+    }
+
+    Colliding(other)
+    {
+        return false;
+    }
+}
+
+class CollisionShape
+{
+
+    Center()
+    {
+        //center of mass
+
+    }
+
+    Inertia(mass)
+    {
+        //moment of inertia
+
+        return 1;
+    }
+}
+
+class Circle extends CollisionShape
+{
+    constructor(radius)
+    {
+        this.radius = radius
+    }
+
+    Center()
+    {
+        return new Vec2(0, 0);
+    }
+
+    Inertia(mass)
+    {
+        return (1/2)*mass*this.radius*this.radius;
     }
 }

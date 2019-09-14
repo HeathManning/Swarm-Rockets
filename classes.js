@@ -43,6 +43,47 @@ function FindClosestBody(position, bodies)
     }
 }
 
+
+class GameObject extends Body
+{
+    constructor(mass, position)
+    {
+        super(mass, position);
+    }
+
+
+    health = 64;
+    startHealth = 64;
+
+    Update(fixedDeltaTime)
+    {
+        super.Update(fixedDeltaTime);
+    }
+
+    Draw()
+    {
+
+    }
+
+    DrawHealth()
+    {
+        let hpRad = 48;
+        let lineWidth = 2;
+        push();
+        translate(this.position.x, this.position.y);
+        rotate(-Math.PI/2);
+        strokeWeight(lineWidth);
+        strokeCap(SQUARE);
+        noFill();
+        if (this.health < this.startHealth && this.health > 0)
+        { 
+            stroke(255, 0, 127, 127);
+            arc(0, 0, hpRad-lineWidth/2, hpRad-lineWidth/2, Math.PI*2*(this.health/this.startHealth), 0);
+        }
+        pop();
+    }
+}
+
 class Particle extends Body
 {
     constructor(position, velocity, parameters)
@@ -168,7 +209,7 @@ class BackgroundStar extends Particle
     }
 }
 
-class Bullet extends Body
+class Bullet extends GameObject
 {
     static bulletSpeed = 512;
 
@@ -236,7 +277,7 @@ class Bullet extends Body
     }
 }
 
-class Rocket extends Body
+class Rocket extends GameObject
 {
     constructor(position, parent)
     {
@@ -257,6 +298,7 @@ class Rocket extends Body
     target = null;
 
     health = 32;
+    startHealth = 32;
 
     Update(fixedDeltaTime)
     {
@@ -359,7 +401,7 @@ class Rocket extends Body
     }
 }
 
-class Drone extends Body
+class Drone extends GameObject
 {
     constructor(position, target)
     {
@@ -381,6 +423,7 @@ class Drone extends Body
     engageDistance = 256;
 
     health = 64;
+    startHealth = 64;
     
     Update(fixedDeltaTime)
     {
@@ -401,7 +444,10 @@ class Drone extends Body
         {
             if(this.shotTimer >= 1/this.fireFrequency)
             {
-                let tarAngle = Vec2.Subtract(this.curTarget.position, this.position).Angle();
+                let dist = Vec2.Distance(this.position, this.curTarget.position)
+                //figure out where to aim turret to hit target
+                let tarPos = Vec2.Subtract(Vec2.Add(this.curTarget.position, Vec2.Scale(this.curTarget.velocity, dist/Bullet.bulletSpeed)), Vec2.Scale(this.velocity, dist/Bullet.bulletSpeed));
+                let tarAngle = Vec2.Subtract(tarPos, this.position).Angle();
                 if(Vec2.Distance(this.position, this.curTarget.position) <= this.engageDistance)
                 {
                     this.shotTimer = 0;
@@ -461,7 +507,7 @@ class Drone extends Body
     }
 }
 
-class Player extends Body
+class Player extends GameObject
 {
     constructor(position, rotation)
     {
@@ -578,26 +624,20 @@ class Player extends Body
 }
 
 
-class Turret extends Body
+class Building extends GameObject
 {
     constructor(position, parent)
     {
         super(32.0, position);
         this.parent = parent;
     }
-    turretAngle = 0;
-    turretLerp = 0.2;
 
-    shotTimer = 0;
-    turretLength = 32;
-    turretWidth = 12;
     delete = false;
-    fireFrequency = 2;
-    engageDistance = 384.0;
 
     drag = 0.1;
 
     health = 256;
+    startHealth = 256;
 
     Update(fixedDeltaTime)
     {
@@ -608,10 +648,35 @@ class Turret extends Body
 
         if(this.delete)
         {
-            SpawnExplosion(this.position, this.velocity, 12);
+            SpawnExplosion(this.position, this.velocity, this.mass);
             this.Delete();
         }
 
+        let dragAmt = fixedDeltaTime*this.drag + 1.0-fixedDeltaTime;
+        this.velocity.Scale(dragAmt).Clamp(this.maxSpeed);
+        this.position.Add(Vec2.Scale(this.velocity, fixedDeltaTime));
+    }
+}
+
+class Turret extends Building
+{
+    constructor(position, parent)
+    {
+        super(position, parent);
+        this.mass = 32;
+    }
+
+    turretAngle = 0;
+    turretLerp = 0.2;
+
+    shotTimer = 0;
+    turretLength = 32;
+    turretWidth = 12;
+    fireFrequency = 2;
+    engageDistance = 384.0;
+
+    Update(fixedDeltaTime)
+    {
         this.target = FindClosestBody(this.position, this.parent.enemies);
         if(this.target != null)
         {
@@ -624,15 +689,15 @@ class Turret extends Body
             {
                 this.shotTimer = 0;
                 new Bullet(Vec2.Add(this.position, Vec2.FromAngle(this.turretAngle, this.turretLength)), this.velocity.Clone(), Vec2.FromAngle(this.turretAngle, 1), this);
-            } else if(this.shotTimer < 1/this.fireFrequency)
-            {
-                this.shotTimer = this.shotTimer + fixedDeltaTime;
             }
         }
 
-        let dragAmt = fixedDeltaTime*this.drag + 1.0-fixedDeltaTime;
-        this.velocity.Scale(dragAmt).Clamp(this.maxSpeed);
-        this.position.Add(Vec2.Scale(this.velocity, fixedDeltaTime));
+        if(this.shotTimer < 1/this.fireFrequency)
+        {
+            this.shotTimer = this.shotTimer + fixedDeltaTime;
+        }
+
+        super.Update(fixedDeltaTime);
     }
 
     Draw()
@@ -650,5 +715,49 @@ class Turret extends Body
         let endPoint = Vec2.FromAngle(this.turretAngle, this.turretLength);
         line(0, 0, endPoint.x, endPoint.y);
         pop();
+        this.DrawHealth();
+    }
+}
+
+class Shield extends Building
+{
+    constructor(position, parent)
+    {
+        super(position, parent);
+        this.mass = 64;
+    }
+
+    shieldHealth = 4096;
+    startShieldHealth = 4096;
+    curRad = 1024/(2*Math.PI);
+
+    Update(fixedDeltaTime)
+    {
+        if(this.shieldHealth <= 0)
+        {
+            this.curRad = 0;
+        } else
+        {
+            this.curRad = this.shieldHealth/(2*Math.PI);
+        }
+
+        super.Update(fixedDeltaTime);
+    }
+
+    Draw()
+    {
+        push();
+        translate(this.position.x, this.position.y);
+        rotate(this.rotation);
+
+        fill(255, 127, 0, 15);
+        ellipse(0, 0, this.curRad);
+
+        fill(143);
+        ellipse(0, 0, 32);
+        fill(191);
+        ellipse(0, 0, 24);
+        pop();
+        this.DrawHealth();
     }
 }
