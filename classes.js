@@ -44,13 +44,16 @@ function FindClosestBody(position, bodies)
 }
 
 
+
+
+
 class GameObject extends Body
 {
-    constructor(mass, position)
+    constructor(mass, position, collider)
     {
         super(mass, position);
+        this.collider = collider;
     }
-
 
     health = 64;
     startHealth = 64;

@@ -12,6 +12,10 @@ class Vec2
     {
         return Vec2.Magnitude(this);
     }
+    SquareMagnitude()
+    {
+        return Vec2.SquareMagnitude(this);
+    }
     Angle()
     {
         return Vec2.Angle(this);
@@ -53,13 +57,30 @@ class Vec2
     {
         return v1.x*v2.x + v1.y*v2.y;
     }
+    static Project(v1, v2)
+    {
+        return Vec2.Scale(v2, Vec2.Dot(v1, v2)/Vec2.SquareMagnitude(v2));
+    }
+    static ProjectionMagnitude(v1, v2)
+    {
+        return Vec2.Dot(v1, Vec2.Normalise(v2));
+    }
+
+    static SquareDistance(v1, v2)
+    {
+        return Vec2.SquareMagnitude(Vec2.Subtract(v2, v1));
+    }
     static Distance(v1, v2)
     {
-        return Math.sqrt((v2.x-v1.x)*(v2.x-v1.x) + (v2.y-v1.y)*(v2.y-v1.y));
+        return Math.sqrt(Vec2.SquareDistance(v1, v2));
+    }
+    static SquareMagnitude(vec)
+    {
+        return vec.x*vec.x + vec.y*vec.y;
     }
     static Magnitude(vec)
     {
-        return Math.sqrt(vec.x*vec.x + vec.y*vec.y);
+        return Math.sqrt(Vec2.SquareMagnitude(vec));
     }
     static Normalise(vec)
     {
@@ -101,6 +122,32 @@ class Vec2
     static Random(radius)
     {
         return Vec2.FromAngle(Math.random()*Math.PI*2, radius);
+    }
+}
+
+class LineSegment
+{
+    constructor(v1, v2)
+    {
+        this.start = v1;
+        this.end = v2;
+    }
+
+    Intersect(other)
+    {
+        //returns the extenet on this line that intersects with the other line
+
+    }
+
+    Point(extent)
+    {
+        //returns the point along this line at the extent percentage
+    }
+
+    Normal()
+    {
+        //returns vector in direction perpedicular to line
+        return Vec2.FromAngle(Math.atan(-(this.end.x-this.start.x)/(this.end.y-this.start.y)), 1);
     }
 }
 
@@ -165,14 +212,45 @@ class Body
 
 class Collider2D
 {
-    constructor(shape)
+    constructor(shape, body)
     {
         this.shape = shape;
+        this.body = body;
     }
 
-    Colliding(other)
+    ResolveCollision(other)
     {
-        return false;
+        
+
+        if(this.shape instanceof Circle && other.shape instanceof Circle)
+        {
+            if(Vec2.SquareDistance(this.body.position, other.body.position) <= (this.shape.radius + other.shape.radius)*(this.shape.radius + other.shape.radius))
+            {
+                return true;
+            }
+
+        } else if(this.shape instanceof Polygon && other.shape instanceof Circle)
+        {
+            for(let i = 0; i < this.shape.vertices.length; i++)
+            {
+
+            }
+
+        } else if(this.shape instanceof Circle && other.shape instanceof Polygon)
+        {
+            for(let i = 0; i < other.shape.vertices.length; i++)
+            {
+
+            }
+
+        } else if(this.shape instanceof Polygon && other.shape instanceof Polygon)
+        {
+            for(let i = 0; i < this.shape.vertices.length; i++)
+            {
+
+            }
+        }
+        return null;
     }
 }
 
@@ -232,8 +310,27 @@ class RegularPolygon extends Polygon
         }
     }
 
+    Center()
+    {
+        return new Vec2(0, 0);
+    }
+
     Inertia(mass)
     {
         return (1/2) * mass * this.radius*this.radius * (1 - (2/3) * Math.sin(Math.PI/this.sides)*Math.sin(Math.PI/this.sides));
+    }
+}
+
+
+class World
+{
+    bodies = [];
+
+    Update(fixedDeltaTime)
+    {
+        for(let i = 0; i < this.bodies.length; i++)
+        {
+            this.bodies[i].Update(fixedDeltaTime);
+        }
     }
 }

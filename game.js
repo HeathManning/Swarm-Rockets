@@ -1,7 +1,3 @@
-class World
-{
-    bodies = [];
-}
 const world = new World();
 
 var player = new Player(new Vec2(0.0, 0.0), 0.0);
@@ -71,10 +67,7 @@ function draw()
         curDrones = curDrones + 1;
     }
 
-    for(let i = 0; i < world.bodies.length; i++)
-    {
-        world.bodies[i].Update(delta);
-    }
+    world.Update(delta);
 
     push();
     let trans = new Vec2((window.innerWidth/(zoom*2.0)-player.position.x), (window.innerHeight/(zoom*2.0)-player.position.y));
