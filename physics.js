@@ -147,6 +147,11 @@ class LineSegment
     Normal()
     {
         //returns vector in direction perpedicular to line
+        return Vec2.FromAngle(Math.atan(-(this.end.x-this.start.x)/(this.end.y-this.start.y) + Math.PI/2), 1);
+    }
+
+    Parallel()
+    {
         return Vec2.FromAngle(Math.atan(-(this.end.x-this.start.x)/(this.end.y-this.start.y)), 1);
     }
 }
@@ -218,7 +223,7 @@ class Collider2D
         this.body = body;
     }
 
-    ResolveCollision(other)
+    Colliding(other)
     {
         
 
@@ -245,10 +250,26 @@ class Collider2D
 
         } else if(this.shape instanceof Polygon && other.shape instanceof Polygon)
         {
+            //seperated axis theorem
             for(let i = 0; i < this.shape.vertices.length; i++)
             {
+                let normal = new LineSegment(this.shape.vertices[i].Clone(), this.shape.vertices[(i+1) % this.shape.vertices.length].Clone()).Normal();
 
+                //get projections of all vertices
+                let proj1 = [];
+                for(let j = 0; j < this.shape.vertices.length; j++)
+                {
+                    proj1.push(Vec2.Dot(this.shape.vertices[j], normal));
+                }
+                let proj2 = [];
+                for(let j = 0; j < other.shape.vertices.length; j++)
+                {
+                    proj2.push(Vec2.Dot(other.shape.vertices[j], normal));
+                }
+
+                //find if the projections overlap
             }
+            return true;
         }
         return null;
     }
